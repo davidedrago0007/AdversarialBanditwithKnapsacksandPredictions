@@ -1,0 +1,13 @@
+gurobipy==10.0.1
+numpy==1.24.3
+other==1.0.0
+pandas==1.4.2
+PyYAML==6.0.1
+that==1.0.7
+zope.component==6.0
+zope.event==5.0
+zope.hookable==5.4
+zope.interface==6.0
+
+plotly~=5.16.1
+yaml~=0.2.5

@@ -1,0 +1,53 @@
+GAME:
+  - T: 10000
+  - n: 5
+  - m: 1
+  - B: 5000
+
+
+ALGORITHM_PRIMAL_DUAL_FULL:
+  - compare: True
+  - algorithm_name: primal_dual
+  - name: primal_dual_full
+  - rp_starting_point: np.repeat(1/n, n)
+  - rd_starting_point: np.repeat(1/(rho*m), m)
+  - learning_rate: 1/np.sqrt(T)
+  - bandit: False
+
+
+ALGORITHM_PRIMAL_DUAL_BANDIT:
+  - compare: True
+  - algorithm_name: primal_dual
+  - name: primal_dual_bandit
+  - rp_starting_point: np.repeat(1/n, n)
+  - rd_starting_point: np.repeat(1/(rho*m), m)
+  - learning_rate: 1/np.sqrt(T)
+  - bandit: True
+
+
+ALGORITHM_LEARNING_AUGMENTED_FULL:
+  - compare: True
+  - algorithm_name: adversarial_with_prediction
+  - name: adversarial_with_prediction_full
+  - rp_starting_point: np.repeat(1/n, n)
+  - rd_starting_point: np.repeat(1/(rho*m), m)
+  - learning_rate: 1/np.sqrt(T)
+  - p: 0.5
+  - nu: 0.0
+  - mu: (2*np.sqrt(2*np.log(T^2)))/(rho*np.sqrt(T))
+  - mixed_action_predicted: [0.8, 0.05, 0.05, 0.05, 0.05]
+  - bandit: False
+
+
+ALGORITHM_LEARNING_AUGMENTED_BANDIT:
+  - compare: True
+  - algorithm_name: adversarial_with_prediction
+  - name: adversarial_with_prediction_bandit
+  - rp_starting_point: np.repeat(1/n, n)
+  - rd_starting_point: np.repeat(1/(rho*m), m)
+  - learning_rate: 1/np.sqrt(T)
+  - p: 0.5
+  - nu: (2*np.sqrt(2*np.log(T^2)))/(rho*np.sqrt(T))
+  - mu: (2*np.sqrt(2*np.log(T^2)))/(rho*np.sqrt(T))
+  - mixed_action_predicted: [0.8, 0.05, 0.05, 0.05, 0.05]
+  - bandit: True
