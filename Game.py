@@ -1,4 +1,5 @@
 import numpy as np
+import AlgorithmsModule.Algorithms as A
 
 
 class Game:
@@ -47,17 +48,17 @@ class Game:
         game = Game(self.T, self.B, self.n, self.m, bandit=self.bandit)
 
         game.B_current = self.B_current
-        game.vector_of_lambdas = self.vector_of_lambdas
-        game.vector_of_sources = self.vector_of_sources
-        game.vector_of_actions = self.vector_of_actions
-        game.vector_of_strategies = self.vector_of_strategies
+        game.vector_of_lambdas = self.vector_of_lambdas.copy()
+        game.vector_of_sources = self.vector_of_sources.copy()
+        game.vector_of_actions = self.vector_of_actions.copy()
+        game.vector_of_strategies = self.vector_of_strategies.copy()
 
         game.best_FD_B_current = self.best_FD_B_current.copy()
         game.cumulative_reward_per_action = self.cumulative_reward_per_action.copy()
         game.expected_cumulative_reward = self.expected_cumulative_reward.copy()
         game.cumulative_cost_per_action = self.cumulative_cost_per_action.copy()
-        game.cumulative_reward = self.cumulative_reward
-        game.cumulative_cost = self.cumulative_cost
+        game.cumulative_reward = self.cumulative_reward.copy()
+        game.cumulative_cost = self.cumulative_cost.copy()
         game.best_action = self.best_action.copy()
         game.regret_per_iteration = self.regret_per_iteration.copy()
         game.cumulative_regret = self.cumulative_regret.copy()
@@ -87,7 +88,7 @@ class Game:
 
         return
 
-    def update(self, reward_vector, cost_vector, mixed_action, action, lambda_value, B_current, source, best_FD):
+    def update(self, reward_vector, cost_vector, mixed_action, action, lambda_value, B_current, source, best_FD, verbose=False):
         self.B_current = B_current
         self.vector_of_lambdas[self.t] = lambda_value
         self.vector_of_sources[self.t] = source
@@ -98,8 +99,6 @@ class Game:
         self.cumulative_cost_per_action[self.t] = self.cumulative_cost_per_action[self.t-1] + cost_vector
 
         if isinstance(action, (np.int32, int)):
-            # print("mixed_action:", mixed_action)
-            # print("action:", action)
             reward = reward_vector[action]
             cost = cost_vector[action, :]
             exp_reward = np.sum(reward_vector * mixed_action)
@@ -111,13 +110,12 @@ class Game:
         self.expected_cumulative_reward[self.t] = self.expected_cumulative_reward[self.t - 1] + exp_reward
         self.cumulative_reward[self.t] = self.cumulative_reward[self.t-1] + reward
         self.cumulative_cost[self.t, :] = self.cumulative_cost[self.t-1, :] + cost
-        # print("CUMULATIVE COST:", self.cumulative_cost[self.t, :])
         list_rewards = self.cumulative_reward_per_action[self.t, :]
         self.best_action[self.t] = np.argmax(list_rewards)
 
-        self.best_FD_B_current -= np.sum(cost_vector.T*best_FD[:-1], axis=1)
+        self.best_FD_B_current -= np.sum(cost_vector.T*best_FD, axis=1)
         if all(self.best_FD_B_current > 1):
-            reward_FD = np.sum(reward_vector * best_FD[:-1])
+            reward_FD = np.sum(reward_vector * best_FD)
         else:
             reward_FD = 0
 
@@ -127,18 +125,41 @@ class Game:
         self.cumulative_regret[self.t] = self.cumulative_regret[self.t-1] + self.regret_per_iteration[self.t]
         self.cumulative_pseudo_regret[self.t] = self.cumulative_pseudo_regret[self.t - 1] + self.pseudo_regret_per_iteration[self.t]
 
+        if verbose:
+            print("   mixed_action:", mixed_action)
+            print("   lambda:", lambda_value)
+            print("   action:", action)
+            print("   reward:", reward)
+            print("   cumulative_reward:", self.cumulative_reward[self.t])
+            print("   cumulative cost:", self.cumulative_cost[self.t, :])
+            print("   best_FD_reward:", reward_FD)
+            print("   regret in this iteration:", self.regret_per_iteration[self.t])
+            print("   cumulative_regret:", self.cumulative_regret[self.t])
         return
 
-    def run_step(self, reward_vector, cost_vector, parameters):
+    def run_step(self, reward_vector, cost_vector, parameters, verbose=False):
         # Run a step of the designated algorithm
         algorithm = parameters["algorithm"]
-        return algorithm(self.actions, self.B_current, self.rho, reward_vector, cost_vector, parameters, self.bandit)
+        return algorithm(self.actions, self.B_current, self.rho, reward_vector, cost_vector, parameters, self.bandit, verbose=verbose)
 
-    def run(self, rewards, costs, parameters, best_FD):
+    def compute_best_mixed_action(self, rewards_partial, costs_partial, lambda_value, rho):
+        average_rewards = np.mean(rewards_partial)
+        average_costs = np.mean(costs_partial)
+        x = np.zeros(self.n)
+        return x
+        
+    
+
+
+    def run(self, rewards, costs, parameters, best_FD, verbose=False):
         for t in range(self.T):
+            if parameters["algorithm"] == A.stochastic_with_prediction:
+                parameters["empirical_action"] = self.compute_best_mixed_action(rewards[:t+1, :], costs[:t+1, :, :], parameters["lambda_value_predicted"], self.rho)
+            if verbose:
+                print(f"ITERATION {t} ")
             mixed_action, action, lambda_value, B_current, parameters, source = self.run_step(
-                rewards[t], costs[t], parameters)
-            self.update(rewards[t], costs[t], mixed_action, action, lambda_value, B_current, source, best_FD)
+                rewards[t], costs[t], parameters, verbose=verbose)
+            self.update(rewards[t], costs[t], mixed_action, action, lambda_value, B_current, source, best_FD, verbose=verbose)
             self.t += 1
         return self, parameters
 

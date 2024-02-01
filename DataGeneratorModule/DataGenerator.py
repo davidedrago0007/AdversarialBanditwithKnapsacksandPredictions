@@ -34,9 +34,9 @@ class DataGenerator:
 
 
     def generate_data_lognormal(self, mean_rewards, sigma_rewards, mean_costs, sigma_costs):
-        rewards = np.zeros((self.T, self.n))
-        costs = np.zeros((self.T, self.n, self.m))
-        for a in range(self.n):
+        rewards = np.zeros((self.T, self.n-1))
+        costs = np.zeros((self.T, self.n-1, self.m))
+        for a in range(self.n-1):
             rewards[:, a] = np.random.lognormal(mean_rewards[a], sigma_rewards[a], size=self.T)
             costs[:, a, :] = np.random.lognormal(mean_costs[a], sigma_costs[a], size=(self.T, self.m))
 
@@ -47,8 +47,8 @@ class DataGenerator:
         rewards = v_func(rewards, np.min(rewards), np.max(rewards))
         costs = v_func(costs, np.min(costs), np.max(costs))
 
-        # rewards_aux = np.hstack((rewards, np.zeros((self.T, 1))))
-        # costs_aux = np.hstack((costs, np.zeros((self.T, 1, self.m))))
+        rewards = np.hstack((rewards, np.zeros((self.T, 1))))
+        costs = np.hstack((costs, np.zeros((self.T, 1, self.m))))
 
         # self.data = (rewards_aux.copy(), costs_aux.copy())
         self.data = (rewards.copy(), costs.copy())
@@ -70,14 +70,14 @@ class DataGenerator:
             return shuffled_mean_rewards
     
     def generate_data_lognormal_adversarial(self, mean_rewards, sigma_rewards, mean_costs, sigma_costs):
-        final_rewards = np.zeros((self.T, self.n))
-        final_costs = np.zeros((self.T, self.n, self.m))
-        for i in range(self.n):
-            rewards = np.zeros((self.T//self.n, self.n))
-            costs = np.zeros((self.T//self.n, self.n, self.m))
-            for a in range(self.n):
-                rewards[:, a] = np.random.lognormal(mean_rewards[a], sigma_rewards[a], size=self.T//self.n)
-                costs[:, a, :] = np.random.lognormal(mean_costs[a], sigma_costs[a], size=(self.T//self.n, self.m))
+        final_rewards = np.zeros((self.T, self.n-1))
+        final_costs = np.zeros((self.T, self.n-1, self.m))
+        for i in range(self.n-1):
+            rewards = np.zeros((self.T//(self.n-1), self.n-1))
+            costs = np.zeros((self.T//(self.n-1), self.n-1, self.m))
+            for a in range(self.n-1):
+                rewards[:, a] = np.random.lognormal(mean_rewards[a], sigma_rewards[a], size=self.T//(self.n-1))
+                costs[:, a, :] = np.random.lognormal(mean_costs[a], sigma_costs[a], size=(self.T//(self.n-1), self.m))
 
             rewards_max = np.percentile(rewards, 75)
             costs_max = np.percentile(costs, 75)
@@ -86,21 +86,24 @@ class DataGenerator:
             rewards = v_func(rewards, np.min(rewards), np.max(rewards))
             costs = v_func(costs, np.min(costs), np.max(costs))
 
-            final_rewards[i*self.T//self.n:(i+1)*self.T//self.n] = rewards.copy()
-            final_costs[i*self.T//self.n:(i+1)*self.T//self.n] = costs.copy()
+            final_rewards[i*self.T//(self.n-1):(i+1)*self.T//(self.n-1)] = rewards.copy()
+            final_costs[i*self.T//(self.n-1):(i+1)*self.T//(self.n-1)] = costs.copy()
 
             mean_rewards = self.exchange_highest_lowest(mean_rewards)
 
+        final_rewards = np.hstack((final_rewards, np.zeros((self.T, 1))))
+        final_costs = np.hstack((final_costs, np.zeros((self.T, 1, self.m))))
+        
         self.data = (final_rewards.copy(), final_costs.copy())
         return 
 
     def generate_data_lognormal_adversarial_v2(self, mean_rewards, sigma_rewards, mean_costs, sigma_costs, rate=1000):
-        final_rewards = np.zeros((self.T, self.n))
-        final_costs = np.zeros((self.T, self.n, self.m))
+        final_rewards = np.zeros((self.T, self.n-1))
+        final_costs = np.zeros((self.T, self.n-1, self.m))
         for i in range(self.T//rate):
-            rewards = np.zeros((rate, self.n))
-            costs = np.zeros((rate, self.n, self.m))
-            for a in range(self.n):
+            rewards = np.zeros((rate, self.n-1))
+            costs = np.zeros((rate, self.n-1, self.m))
+            for a in range(self.n-1):
                 rewards[:, a] = np.random.lognormal(mean_rewards[a], sigma_rewards[a], size=rate)
                 costs[:, a, :] = np.random.lognormal(mean_costs[a], sigma_costs[a], size=(rate, self.m))
 
@@ -117,10 +120,8 @@ class DataGenerator:
             mean_rewards = self.exchange_highest_lowest(mean_rewards)
             mean_costs = self.exchange_highest_lowest(mean_costs)
 
-        # rewards_aux = np.hstack((rewards, np.zeros((self.T, 1))))
-        # costs_aux = np.hstack((costs, np.zeros((self.T, 1, self.m))))
-
-        # self.data = (rewards_aux.copy(), costs_aux.copy())
+        final_rewards = np.hstack((final_rewards, np.zeros((self.T, 1))))
+        final_costs = np.hstack((final_costs, np.zeros((self.T, 1, self.m))))
         self.data = (final_rewards.copy(), final_costs.copy())
         return 
 
