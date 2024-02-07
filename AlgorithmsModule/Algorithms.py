@@ -72,7 +72,9 @@ def primal_dual(actions, B_current, rho, reward_vector, cost_vector, parameters,
         else:
             if verbose:
                 print("     Full Feedback- getting the lossess...")
+
             B_current -= cost_vector[action]
+
             if verbose:
                 print("     The mixed action used is:", mixed_action)
                 print("    The cost vector used is:", cost_vector)
@@ -86,6 +88,7 @@ def primal_dual(actions, B_current, rho, reward_vector, cost_vector, parameters,
             RP.observe_utility(loss=primal_loss)
         RD.observe_utility(loss=dual_loss)
 
+
     parameters["RP"] = RP
     parameters["RD"] = RD
     return mixed_action, action, lambda_value, B_current, parameters, source
@@ -93,11 +96,11 @@ def primal_dual(actions, B_current, rho, reward_vector, cost_vector, parameters,
 
 def adversarial_with_prediction(actions, B_current, rho, reward_vector, cost_vector, parameters, bandit, verbose=False):
     p = parameters["p"]
-    nu = parameters["nu"]
     mu = parameters["mu"]
     m = parameters["m"]
     B_current_A = parameters.get("B_current_A", np.repeat(parameters["B"]*p, m)).copy()
     B_current_WC = parameters.get("B_current_WC", np.repeat(parameters["B"]*(1-p), m)).copy()
+    B_aux_WC = parameters.get("B_aux_WC", np.repeat(parameters["B"]*1.0, m)).copy()
     if verbose:
         print("Running the adversarial algorithm...")
         print("starting B_current_WC:", B_current_WC)
@@ -106,7 +109,7 @@ def adversarial_with_prediction(actions, B_current, rho, reward_vector, cost_vec
     mixed_action_predicted = parameters["mixed_action_predicted"]
     prob = np.random.random()
 
-    if prob < p-nu:  # with prob p-nu
+    if prob < p-mu:  # with prob p-nu
         source = "Prediction"
         if verbose:
             print("  Entering source:", source)
@@ -117,7 +120,7 @@ def adversarial_with_prediction(actions, B_current, rho, reward_vector, cost_vec
             action = np.random.choice(actions, p=mixed_action)
 
         else:
-
+            source = "Void"
             action = None
             mixed_action = np.zeros(len(actions))
 
@@ -146,18 +149,38 @@ def adversarial_with_prediction(actions, B_current, rho, reward_vector, cost_vec
                 if verbose:
                     print("B_current_A new:", B_current_A)
                 
-    elif (p-nu <= prob) and (prob < 1-nu-mu):  # with prob 1-p-mu
+    elif (p-mu <= prob) and (prob < 1-2*mu):  # with prob 1-p-mu
         if verbose:
             print("Entering source:", "WC_algorithm")
-        mixed_action, action, lambda_value, B_current_WC, parameters, source = primal_dual(actions, B_current_WC, rho,
-                                                                                        reward_vector, cost_vector,
-                                                                                        parameters, bandit, verbose=verbose
-                                                                                        )
-        if verbose:
-            print("mixed_action:", mixed_action)
-        parameters["B_current_WC"] = B_current_WC.copy()
-        if verbose:
-            print("B_current_WC new:", B_current_WC)
+        source = "Void"
+        if all(B_current_WC > 1):
+            if not bandit:
+                B_aux_WC_previous = B_aux_WC.copy()
+                mixed_action, action, lambda_value, B_aux_WC, parameters, source = primal_dual(actions, B_aux_WC, rho,
+                                                                                            reward_vector, cost_vector,
+                                                                                            parameters, bandit, verbose=verbose
+                                                                                            )
+                if verbose:
+                    print("mixed_action:", mixed_action)
+                    B_current_WC -= (B_aux_WC_previous - B_aux_WC)
+                parameters["B_current_WC"] = B_current_WC.copy()
+                parameters["B_aux_WC"] = B_aux_WC.copy()
+                if verbose:
+                    print("B_current_WC new:", B_current_WC)
+            else:
+                mixed_action, action, lambda_value, B_current_WC, parameters, source = primal_dual(actions, B_current_WC, rho,
+                                                                                            reward_vector, cost_vector,
+                                                                                            parameters, bandit, verbose=verbose
+                                                                                            )
+                if verbose:
+                    print("mixed_action:", mixed_action)
+                parameters["B_current_WC"] = B_current_WC.copy()
+                if verbose:
+                    print("B_current_WC new:", B_current_WC)
+        else:
+            action = None
+            mixed_action = np.zeros(len(actions))
+
     else:  # with prob nu+mu
         
         mixed_action = np.zeros(len(actions))
@@ -169,22 +192,22 @@ def adversarial_with_prediction(actions, B_current, rho, reward_vector, cost_vec
     if source != "WC_algorithm":  # update WC algorithm with the available feedback
         if bandit:
             reward_vector_aux, cost_vector_aux = np.zeros(len(reward_vector)), np.zeros(cost_vector.shape)
-            B_c_aux = B_current_WC.copy()
+            B_temp = B_current_WC.copy()
             if verbose:
                 print("     UPDATING wc in bandit setting...")
-            _, _, lambda_value, _, parameters, _ = primal_dual(actions, B_c_aux, rho,
+            _, _, lambda_value, _, parameters, _ = primal_dual(actions, B_temp, rho,
                                                                reward_vector_aux, cost_vector_aux,
                                                                parameters, bandit, verbose=verbose
                                                                )
         else:
-            B_c_aux = B_current_WC.copy()
             reward_vector_aux, cost_vector_aux = reward_vector, cost_vector
             if verbose:
                 print("     UPDATING wc in ff setting...")
-            _, _, lambda_value, _, parameters, _ = primal_dual(actions, B_c_aux, rho,
+            _, _, lambda_value, B_aux_WC, parameters, _ = primal_dual(actions, B_aux_WC, rho,
                                                                 reward_vector_aux, cost_vector_aux,
                                                                 parameters, bandit, verbose=verbose
                                                                 )
+            parameters["B_aux_WC"] = B_aux_WC.copy()
     return mixed_action, action, lambda_value, B_current, parameters, source
 
 

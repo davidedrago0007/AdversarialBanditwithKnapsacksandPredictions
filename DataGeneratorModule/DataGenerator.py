@@ -3,8 +3,8 @@ import numpy as np
 import Game as G
 
 
-def func(x, x_min, x_max):
-    return (x - x_min) / (x_max - x_min)
+def func(x, x_max):
+    return (x) / (x_max)
 
 def func2(x):
     return min(x, 1)
@@ -40,12 +40,14 @@ class DataGenerator:
             rewards[:, a] = np.random.lognormal(mean_rewards[a], sigma_rewards[a], size=self.T)
             costs[:, a, :] = np.random.lognormal(mean_costs[a], sigma_costs[a], size=(self.T, self.m))
 
-        rewards_max = np.percentile(rewards, 75)
-        costs_max = np.percentile(costs, 75)
-        rewards[rewards >= rewards_max] = rewards_max
-        costs[costs >= costs_max] = costs_max
-        rewards = v_func(rewards, np.min(rewards), np.max(rewards))
-        costs = v_func(costs, np.min(costs), np.max(costs))
+        #rewards_max = np.percentile(rewards, 75)
+        #print("rewards_max: ", rewards_max)
+        #costs_max = np.percentile(costs, 75)
+        #print("costs_max: ", costs_max)
+        rewards[rewards >= 5] = 5
+        costs[costs >= 5] = 5
+        rewards = v_func(rewards, np.max(rewards))
+        costs = v_func(costs, np.max(costs))
 
         rewards = np.hstack((rewards, np.zeros((self.T, 1))))
         costs = np.hstack((costs, np.zeros((self.T, 1, self.m))))
@@ -81,8 +83,10 @@ class DataGenerator:
 
             rewards_max = np.percentile(rewards, 75)
             costs_max = np.percentile(costs, 75)
-            rewards[rewards >= rewards_max] = rewards_max
-            costs[costs >= costs_max] = costs_max
+            print("rewards_max: ", rewards_max)
+            print("costs_max: ", costs_max)
+            rewards[rewards >= 5] = 5
+            costs[costs >= 5] = 5
             rewards = v_func(rewards, np.min(rewards), np.max(rewards))
             costs = v_func(costs, np.min(costs), np.max(costs))
 
@@ -107,12 +111,14 @@ class DataGenerator:
                 rewards[:, a] = np.random.lognormal(mean_rewards[a], sigma_rewards[a], size=rate)
                 costs[:, a, :] = np.random.lognormal(mean_costs[a], sigma_costs[a], size=(rate, self.m))
 
-            rewards_max = np.percentile(rewards, 75)
-            costs_max = np.percentile(costs, 75)
-            rewards[rewards >= rewards_max] = rewards_max
-            costs[costs >= costs_max] = costs_max
-            rewards = v_func(rewards, np.min(rewards), np.max(rewards))
-            costs = v_func(costs, np.min(costs), np.max(costs))
+            # rewards_max = np.percentile(rewards, 95)
+            # costs_max = np.percentile(costs, 95)
+            # print("rewards_max: ", rewards_max)
+            # print("costs_max: ", costs_max)
+            rewards[rewards >= 5] = 5
+            costs[costs >= 5] = 5
+            rewards = v_func(rewards, np.max(rewards))
+            costs = v_func(costs, np.max(costs))
 
             final_rewards[i*rate:(i+1)*rate] = rewards.copy()
             final_costs[i*rate:(i+1)*rate] = costs.copy()
@@ -318,3 +324,9 @@ class DataGenerator:
     # import sys
     # sys.path.append('C://Users//david//Desktop//AdversarialBanditwithKnapsacks_code//AdversarialKnapsacksCode//DG//DataGenerator.py')
     # import DataGenerator.DataGenerator as DG
+
+
+    # plot difference with benchmark in noisy prediction
+
+    # Try all with 100k iterations
+
