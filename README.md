@@ -1,4 +1,4 @@
-# Adversarial Bandit with Knapsacks
+# Adversarial Bandit with Knapsacks and Predictions
 
 This project implements the experimental analysis of the paper "Bandits with Knapsacks and Predictions". 
 
