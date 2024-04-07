@@ -1,4 +1,4 @@
-import RegretMinimerzModule.RegretMinimizer as R
+import RegretMinimisersModule.RegretMinimizer as R
 import numpy as np
 
 

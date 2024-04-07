@@ -1,7 +1,7 @@
 
 import numpy as np
 import AlgorithmsModule.Algorithms as A
-import RegretMinimerzModule.RegretMinimizer as R
+import RegretMinimisersModule.RegretMinimizer as R
 
 
 # SEEDS - Define the seed for reproducibility - some instantiations may generate infinite values issues due to the bandit computations
