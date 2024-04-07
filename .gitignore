@@ -7,3 +7,5 @@
 /thrash/
 /__pycache__/
 /.idea/
+data_copy.pkl
+data_test.pkl
