@@ -1,30 +1,53 @@
-import numpy as np
 import AlgorithmsModule.Algorithms as A
-
+import numpy as np
 
 class Game:
+    """
+    Represents a game with adversarial bandit with knapsacks setting.
 
-    def __init__(self, T, B, n, m, bandit=False):
+    Attributes:
+    - T (int): Total number of iterations.
+    - B (int): Budget per resource.
+    - n (int): Number of actions.
+    - m (int): Number of resources.
+    - bandit (bool): Flag indicating whether the game is a bandit game.
+
+    Methods:
+    - __init__(self, T:int, B:int, n:int, m:int, bandit:bool = False): Initializes a Game object.
+    - copy(self): Creates a copy of the current Game object.
+    - reset(self): Resets the game to its initial state.
+    - update(self, reward_vector, cost_vector, mixed_action, action, lambda_value, B_current, source, best_FD, verbose=False): Updates the game state based on the given inputs.
+    - run_step(self, reward_vector, cost_vector, parameters, verbose=False): Runs a step of the designated algorithm.
+    - compute_best_mixed_action(self, rewards_partial, costs_partial, lambda_value, rho): Computes the best mixed action based on partial rewards and costs.
+    - run(self, rewards, costs, parameters, best_FD, verbose=False): Runs the game.
+
+    """
+
+    def __init__(self, T:int, B:int, n:int, m:int, bandit:bool = False):
+        """
+        Initializes a Game object.
+
+        Parameters:
+        - T (int): Total number of iterations.
+        - B (int): Budget per resource.
+        - n (int): Number of actions.
+        - m (int): Number of resources.
+        - bandit (bool, optional): Flag indicating whether the game is a bandit game. Defaults to False.
+        """
         self.bandit = bandit
 
         self.T = T  # Total number of iterations
         self.t = 0  # Current iteration
 
         self.B = B  # Budget per resource
-        self.m = m
+        self.m = m  # Number of resources
         self.B_current = np.ones(self.m) * B  # Initialising the current budget
-        self.rho = self.B / self.T
+        self.rho = self.B / self.T  # Budget per iteration
 
-        self.n = n
+        self.n = n  # Number of actions
         self.actions = np.arange(self.n)
 
-        # self.GP = 0
-        # self.GD = 0
-        # if delta:
-        #     self.HP = 2*np.sqrt(2*self.delta*np.log(8*self.n*self.T**2)) + \
-        #           (2/self.rho)*np.sqrt(2*self.delta*np.log(8*self.n*(self.T**2)/self.rho))
-        #     self.HD = 2*np.sqrt((2*self.delta/self.rho)*np.log(4*self.n*(self.T**2)))
-
+        # Instantiate the memory for the experiment data
         self.vector_of_actions = np.zeros(self.T)
         self.vector_of_strategies = np.zeros((self.T, self.n))
         self.vector_of_lambdas = np.zeros((self.T, self.m))
@@ -45,6 +68,12 @@ class Game:
         return
 
     def copy(self):
+        """
+        Creates a copy of the current Game object.
+
+        Returns:
+            A new Game object with the same attribute values as the current object.
+        """
         game = Game(self.T, self.B, self.n, self.m, bandit=self.bandit)
 
         game.B_current = self.B_current
@@ -68,6 +97,9 @@ class Game:
         return game
 
     def reset(self):
+        """
+        Resets the game to its initial state.
+        """
         self.B_current = np.ones(self.m) * self.B
         self.vector_of_actions = np.zeros(self.T, dtype=np.int32)
         self.vector_of_strategies = np.zeros((self.T, self.n))
@@ -89,6 +121,20 @@ class Game:
         return
 
     def update(self, reward_vector, cost_vector, mixed_action, action, lambda_value, B_current, source, best_FD, verbose=False):
+        """
+        Updates the game state based on the given inputs.
+
+        Parameters:
+        - reward_vector (numpy.ndarray): Vector of rewards for each action.
+        - cost_vector (numpy.ndarray): Matrix of costs for each action and resource.
+        - mixed_action (numpy.ndarray): Vector of mixed actions.
+        - action (int): Chosen action.
+        - lambda_value (float): Lambda value.
+        - B_current (numpy.ndarray): Current budget per resource.
+        - source (object): Source of the update.
+        - best_FD (numpy.ndarray): Best feasible decision budget per resource.
+        - verbose (bool, optional): Flag indicating whether to print verbose output. Defaults to False.
+        """
         self.B_current = B_current
         self.vector_of_lambdas[self.t] = lambda_value
         self.vector_of_sources[self.t] = source
@@ -138,23 +184,57 @@ class Game:
         return
 
     def run_step(self, reward_vector, cost_vector, parameters, verbose=False):
+        """
+        Runs a step of the designated algorithm.
+
+        Parameters:
+        - reward_vector (numpy.ndarray): Vector of rewards for each action.
+        - cost_vector (numpy.ndarray): Matrix of costs for each action and resource.
+        - parameters (dict): Dictionary of algorithm parameters.
+        - verbose (bool, optional): Flag indicating whether to print verbose output. Defaults to False.
+
+        Returns:
+        - The result of the algorithm step.
+        """
         # Run a step of the designated algorithm
         algorithm = parameters["algorithm"]
         return algorithm(self.actions, self.B_current, self.rho, reward_vector, cost_vector, parameters, self.bandit, verbose=verbose)
 
     def compute_best_mixed_action(self, rewards_partial, costs_partial, lambda_value, rho):
+        """
+        Computes the best mixed action based on partial rewards and costs.
+
+        Parameters:
+        - rewards_partial (numpy.ndarray): Partial vector of rewards.
+        - costs_partial (numpy.ndarray): Partial matrix of costs.
+        - lambda_value (float): Lambda value.
+        - rho (float): Budget per iteration.
+
+        Returns:
+        - The best mixed action.
+        """
         average_rewards = np.mean(rewards_partial)
         average_costs = np.mean(costs_partial)
         x = np.zeros(self.n)
         return x
-        
-    
-
 
     def run(self, rewards, costs, parameters, best_FD, verbose=False):
+        """
+        Runs the game.
+
+        Parameters:
+        - rewards (numpy.ndarray): Matrix of rewards for each iteration and action.
+        - costs (numpy.ndarray): 3D matrix of costs for each iteration, action, and resource.
+        - parameters (dict): Dictionary of algorithm parameters.
+        - best_FD (numpy.ndarray): Best feasible decision budget per resource.
+        - verbose (bool, optional): Flag indicating whether to print verbose output. Defaults to False.
+
+        Returns:
+        - The game object and the updated parameters.
+        """
+        # Implementation of the game logic
+        pass
         for t in range(self.T):
-            if parameters["algorithm"] == A.stochastic_with_prediction:
-                parameters["empirical_action"] = self.compute_best_mixed_action(rewards[:t+1, :], costs[:t+1, :, :], parameters["lambda_value_predicted"], self.rho)
             if verbose:
                 print(f"ITERATION {t} ")
             mixed_action, action, lambda_value, B_current, parameters, source = self.run_step(
@@ -164,11 +244,29 @@ class Game:
         return self, parameters
 
     def results_pseudo(self):
+        """
+        Returns the cumulative pseudo regret of the game.
+
+        Returns:
+        - The cumulative pseudo regret.
+        """
         return self.cumulative_pseudo_regret[-1]
     
     def results(self):
+        """
+        Returns the cumulative regret of the game.
+
+        Returns:
+        - The cumulative regret.
+        """
         return self.cumulative_regret[-1]
     
     def results_cost(self):
+        """
+        Returns the cumulative cost of the game.
+
+        Returns:
+        - The cumulative cost.
+        """
         return self.cumulative_cost
     

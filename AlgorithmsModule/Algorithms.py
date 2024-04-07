@@ -3,6 +3,23 @@ import numpy as np
 
 
 def primal_dual(actions, B_current, rho, reward_vector, cost_vector, parameters, bandit, verbose=False):
+    """
+    Implements the primal-dual algorithm from Castiglioni et al. (2021).
+
+    Args:
+        actions (list): List of possible actions.
+        B_current (numpy.ndarray): Current budget vector.
+        rho (float): Dual parameter.
+        reward_vector (numpy.ndarray): Vector of rewards for each action.
+        cost_vector (numpy.ndarray): Matrix of costs for each action and resource.
+        parameters (dict): Dictionary of algorithm parameters.
+        bandit (bool): Flag indicating whether the problem is a bandit problem or full feedback problem.
+        verbose (bool, optional): Flag indicating whether to print verbose output. Defaults to False.
+
+    Returns:
+        tuple: Tuple containing the mixed action, chosen action, dual variable, updated budget, updated parameters, and source.
+
+    """
     if verbose:
         print("Running the primal-dual algorithm...")
         print(" reward vector:", reward_vector)
@@ -95,6 +112,30 @@ def primal_dual(actions, B_current, rho, reward_vector, cost_vector, parameters,
 
 
 def adversarial_with_prediction(actions, B_current, rho, reward_vector, cost_vector, parameters, bandit, verbose=False):
+    """
+    Run the adversarial algorithm with prediction.
+
+    Args:
+        actions (list): List of possible actions.
+        B_current (numpy.ndarray): Current budget vector.
+        rho (float): Learning rate.
+        reward_vector (numpy.ndarray): Vector of rewards for each action.
+        cost_vector (numpy.ndarray): Matrix of costs for each action and resource.
+        parameters (dict): Dictionary of algorithm parameters.
+        bandit (bool): Flag indicating whether it's a bandit setting or not.
+        verbose (bool, optional): Flag indicating whether to print verbose output. Defaults to False.
+
+    Returns:
+        tuple: A tuple containing the following elements:
+            - mixed_action (numpy.ndarray): Mixed action vector.
+            - action (int or None): Selected action.
+            - lambda_value (float): Dual variable value.
+            - B_current (numpy.ndarray): Updated budget vector.
+            - parameters (dict): Updated algorithm parameters.
+            - source (str): Source of the action selection.
+
+    """
+    # Retrieve the parameters from the dictionary
     p = parameters["p"]
     mu = parameters["mu"]
     m = parameters["m"]
@@ -109,7 +150,8 @@ def adversarial_with_prediction(actions, B_current, rho, reward_vector, cost_vec
     mixed_action_predicted = parameters["mixed_action_predicted"]
     prob = np.random.random()
 
-    if prob < p-mu:  # with prob p-nu
+    # with prob p-mu
+    if prob < p-mu:
         source = "Prediction"
         if verbose:
             print("  Entering source:", source)
@@ -148,8 +190,9 @@ def adversarial_with_prediction(actions, B_current, rho, reward_vector, cost_vec
                 parameters["B_current_A"] = B_current_A.copy()
                 if verbose:
                     print("B_current_A new:", B_current_A)
-                
-    elif (p-mu <= prob) and (prob < 1-2*mu):  # with prob 1-p-mu
+    
+    # with prob 1-p-mu
+    elif (p-mu <= prob) and (prob < 1-2*mu):
         if verbose:
             print("Entering source:", "WC_algorithm")
         source = "Void"
@@ -181,7 +224,8 @@ def adversarial_with_prediction(actions, B_current, rho, reward_vector, cost_vec
             action = None
             mixed_action = np.zeros(len(actions))
 
-    else:  # with prob nu+mu
+    # with prob 2mu
+    else:
         
         mixed_action = np.zeros(len(actions))
         action = None
@@ -209,74 +253,3 @@ def adversarial_with_prediction(actions, B_current, rho, reward_vector, cost_vec
                                                                 )
             parameters["B_aux_WC"] = B_aux_WC.copy()
     return mixed_action, action, lambda_value, B_current, parameters, source
-
-
-def stochastic_with_prediction(actions, B_current, rho, reward_vector, cost_vector, parameters, bandit, verbose=False):
-    t = parameters["t"]
-    n = parameters["n"]
-    rho = parameters["rho"]
-    B_current = parameters["B_current"]
-    total_reward = parameters["total_reward"]
-    average_reward = (parameters["average_reward"]*(t-1) + reward_vector)*t
-    average_cost = (parameters["average_cost"]*(t-1) + cost_vector)*t
-    h = np.sqrt(t * np.log(((parameters["delta"]/4)*parameters["T"])**2))
-
-    if t < parameters["Delta"]:
-        source = "Prediction"
-        if verbose:
-            print("Entering source:", source)
-        mixed_action = parameters["mixed_action_predicted"].copy()
-        action = np.random.choice(actions, p=mixed_action)
-        lambda_value = parameters["lambda_value_predicted"].copy()
-        B_current -= cost_vector[action, :]
-        
-    if t >= parameters["Delta"]:
-        # If the algorithm is in the primal-dual state, play the worst-case algorithm
-        if parameters["state"] == "primal_dual":
-            if verbose:
-                print("Entering source:", "WC_algorithm")
-            mixed_action, action, lambda_value, B_current, parameters, source = primal_dual(actions, B_current, rho,
-                                                                                            reward_vector, cost_vector,
-                                                                                            parameters, bandit, verbose=verbose
-                                                                                            )
-            if verbose:
-                    print("B_current new:", B_current)
-        # Otherwise check the performance of the prediction and decide whether to switch to the primal-dual state
-        else:
-            if verbose:
-                print("Checking the performance...")
-            # Get the empirical best reward for the current iteration
-            empirical_reward = 0
-            # Check if the empirical reward is close enough to the predicted reward
-            if np.abs(total_reward - empirical_reward) <= 3*h:
-                source = "Prediction"
-                if verbose:
-                    print("Entering source:", source)
-                mixed_action = parameters["mixed_action_predicted"].copy()
-                action = np.random.choice(actions, p=mixed_action)
-                lambda_value = parameters["lambda_value_predicted"].copy()
-                B_current -= cost_vector[action, :]
-            else:
-                parameters["state"] = "primal_dual"
-                if verbose:
-                    print("Entering source:", "WC_algorithm")
-                mixed_action, action, lambda_value, B_current, parameters, source = primal_dual(actions, B_current, rho,
-                                                                                            reward_vector, cost_vector,
-                                                                                            parameters, bandit, verbose=verbose
-                                                                                            )
-                if verbose:
-                    print("B_current new:", B_current)
-    
-    if bandit:
-        parameters["total_loss"] += np.sum(reward_vector*mixed_action) - np.sum(lambda_value * (rho - np.sum(cost_vector*mixed_action.reshape(n, 1), axis=0)))
-        parameters["B_current"] = B_current.copy()
-    else:
-        parameters["total_loss"] += np.sum(reward_vector * mixed_action)
-        parameters["B_current"] = B_current.copy()
-        
-    parameters["t"] = t+1
-    parameters["average_reward"] = average_reward
-    parameters["average_cost"] = average_cost
-    return mixed_action, action, lambda_value, B_current, parameters, source
-
-
